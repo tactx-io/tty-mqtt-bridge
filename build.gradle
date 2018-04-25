@@ -1,0 +1,20 @@
+group 'io.tactx.tmb'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.5
+
+repositories {
+    mavenCentral()
+    // mavenLocal()
+    maven {
+        url "https://repo.eclipse.org/content/repositories/paho-snapshots/"
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+}
