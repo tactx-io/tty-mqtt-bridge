@@ -7,62 +7,148 @@ package io.tactx.tmb;
 
 //import org.apache.commons.cli.*;
 
+
+import gnu.io.SerialPort;
+import gnu.io.SerialPortEvent;
+import gnu.io.SerialPortEventListener;
 import org.apache.commons.cli.*;
+import gnu.io.CommPortIdentifier;
+import org.eclipse.paho.client.mqttv3.*;
 
 
-public class TtyMqttBridge {
-    public static void main(String[] args) {
-        // parse command line arguments
-        boolean verbose = true;
-        Options options = new Options();
-
-        Option broker_url_option = new Option("b", "broker-url", true, "url to the broker");
-        broker_url_option.setRequired(true);
-
-        Option broker_port_option = new Option("p", "broker-port", true, "port of the broker");
-        broker_port_option.setRequired(true);
-
-        Option topic_option = new Option("x", "topic", true, "topic to publish under");
-        topic_option.setRequired(true);
-
-        Option clientid_option = new Option("c", "clientid", true, "client id");
-        clientid_option.setRequired(true);
-
-        Option tty_option = new Option("t", "tty", true, "local tty interface to publish the data from");
-        tty_option.setRequired(true);
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.Enumeration;
 
 
-        options.addOption(broker_url_option);
-        options.addOption(broker_port_option);
-        options.addOption(tty_option);
-        options.addOption(clientid_option);
-        options.addOption(topic_option);
+public class TtyMqttBridge implements SerialPortEventListener {
 
-        CommandLineParser parser = new BasicParser();
-        HelpFormatter formatter = new HelpFormatter();
-        CommandLine cmd;
+    private static final int TIME_OUT = 2000;
+    private static final int DATA_RATE = 9600;
+
+    BufferedReader input;
+    OutputStream output;
+
+    private MqttClient mClient;
+
+
+    CommPortIdentifier mCommPortIdentifier;
+    String mBrokerUrl  = "iot.eclipse.org";
+
+    SerialPort serialPort;
+
+
+    public static CommPortIdentifier ttyPort(String tty_name) {
+        Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
+        CommPortIdentifier currPortId = null;
+        while (portEnum.hasMoreElements()) {
+
+            currPortId = (CommPortIdentifier) portEnum.nextElement();
+            String portname = currPortId.getName();
+            if (portname.equals(tty_name)) {
+                return currPortId;
+            }
+        }
+        return null;
+    }
+
+
+    public TtyMqttBridge(CommPortIdentifier currPortId, String brokerUrlAndPort) {
+        mCommPortIdentifier = currPortId;
+        mBrokerUrl = brokerUrlAndPort;
+    }
+
+    public void initialize() {
 
         try {
-            cmd = parser.parse(options, args);
-        } catch (ParseException e) {
-            System.out.println(e.getMessage());
-            formatter.printHelp("tty-mqtt-bridge", options);
+            serialPort = (SerialPort) mCommPortIdentifier.open(this.getClass().getName(),
+                    TIME_OUT);
+            serialPort.setSerialPortParams(DATA_RATE,
+                    SerialPort.DATABITS_8,
+                    SerialPort.STOPBITS_1,
+                    SerialPort.PARITY_NONE);
 
-            System.exit(1);
-            return;
+            // open the streams
+            input = new BufferedReader(new InputStreamReader(serialPort.getInputStream()));
+            output = serialPort.getOutputStream();
+
+
+            // output.write("measure 1000".getBytes());
+            serialPort.addEventListener(this);
+            serialPort.notifyOnDataAvailable(true);
+            this.connect();
+        } catch (Exception e) {
+            System.out.println(e.toString());
         }
-
-        if(verbose){
-            System.out.println("tty-mqtt-bridge");
-            System.out.println("using mqtt broker " + cmd.getOptionValue("broker-url") + " on port " + cmd.getOptionValue("broker-port"));
-            System.out.println("Connecting...");
-            System.out.println("using tty" + cmd.getOptionValue("tty"));
-            System.out.println("Connecting...");
-        }
-
-        String topic        = cmd.getOptionValue("topic");
-        int qos             = 2;
-        String broker       = cmd.getOptionValue("broker-url") + ":" + cmd.getOptionValue("broker-port");
-        String clientId     = cmd.getOptionValue("clientid");
     }
+
+    public synchronized void serialEvent(SerialPortEvent oEvent) {
+        if (oEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
+            try {
+                String inputLine = null;
+                if (input.ready()) {
+                    inputLine = input.readLine();
+
+
+                    if(mClient != null){
+                        if(mClient.isConnected()){
+                            MqttMessage message = new MqttMessage(inputLine.getBytes());
+                            message.setQos(2);
+
+                            // Send the message to the server, control is not returned until
+                            // it has been delivered to the server meeting the specified
+                            // quality of service.
+                            //
+                            //
+                            System.out.println("Publish " + inputLine);
+
+                            mClient.publish("kiska/amessage", message);
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+                System.err.println("seriral in error " + e.toString());
+            }
+        }
+        // Ignore all the other eventTypes, but you should consider the other ones.
+    }
+
+    public synchronized void close() {
+        if (serialPort != null) {
+            serialPort.removeEventListener();
+            serialPort.close();
+        }
+    }
+
+
+
+    public void connect() throws MqttException {
+        System.out.println("Connecting to " + mBrokerUrl);
+        mClient = new MqttClient("tcp://iot.eclipse.org:1883", "pubsub-1");
+        mClient.setCallback(mCallback);
+        mClient.connect();
+    }
+
+
+    MqttCallback mCallback = new MqttCallback() {
+        public void connectionLost(Throwable t) {
+            try {
+                connect();
+            } catch (MqttException e) {
+                System.out.println("Connection error " + e.getMessage() + " --- " + e.toString());
+            }
+        }
+
+        public void messageArrived(String topic, MqttMessage message) throws Exception {
+            System.out.println("topic - " + topic + ": " + new String(message.getPayload()));
+        }
+
+        public void deliveryComplete(IMqttDeliveryToken token) {
+            System.out.println("message sent");
+        }
+
+    };
+
 }
