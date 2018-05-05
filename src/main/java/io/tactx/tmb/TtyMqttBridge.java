@@ -14,6 +14,7 @@ import gnu.io.SerialPortEventListener;
 import org.apache.commons.cli.*;
 import gnu.io.CommPortIdentifier;
 import org.eclipse.paho.client.mqttv3.*;
+import org.json.JSONObject;
 
 
 import java.io.BufferedReader;
@@ -31,6 +32,8 @@ public class TtyMqttBridge implements SerialPortEventListener {
     OutputStream output;
 
     private MqttClient mClient;
+
+    private String mBaseTopic;
 
 
     CommPortIdentifier mCommPortIdentifier;
@@ -54,9 +57,10 @@ public class TtyMqttBridge implements SerialPortEventListener {
     }
 
 
-    public TtyMqttBridge(CommPortIdentifier currPortId, String brokerUrlAndPort) {
+    public TtyMqttBridge(CommPortIdentifier currPortId, String brokerUrlAndPort, String basetopic) {
         mCommPortIdentifier = currPortId;
         mBrokerUrl = brokerUrlAndPort;
+        mBaseTopic = basetopic;
     }
 
     public void initialize() {
@@ -69,12 +73,9 @@ public class TtyMqttBridge implements SerialPortEventListener {
                     SerialPort.STOPBITS_1,
                     SerialPort.PARITY_NONE);
 
-            // open the streams
             input = new BufferedReader(new InputStreamReader(serialPort.getInputStream()));
             output = serialPort.getOutputStream();
 
-
-            // output.write("measure 1000".getBytes());
             serialPort.addEventListener(this);
             serialPort.notifyOnDataAvailable(true);
             this.connect();
@@ -90,20 +91,28 @@ public class TtyMqttBridge implements SerialPortEventListener {
                 if (input.ready()) {
                     inputLine = input.readLine();
 
+                    System.out.println("Parsing line: " + inputLine);
+                    JSONObject jsonObj = new JSONObject(inputLine);
+
+                    String topicobj = jsonObj.getString("topic-name");
+                    JSONObject valuesobj = jsonObj.getJSONObject("values");
+
+                  //  if(topicobj == null){
+                    //    System.out.println("not able to parse \"topic\" name");
+                   // }
+                    if(valuesobj == null){
+                        System.out.println("not able to parse \"valuse\" name");
+                    }
 
                     if(mClient != null){
                         if(mClient.isConnected()){
-                            MqttMessage message = new MqttMessage(inputLine.getBytes());
+                            String topicpath = mBaseTopic + "/" + topicobj;
+                            MqttMessage message = new MqttMessage(valuesobj.toString().getBytes());
                             message.setQos(2);
 
-                            // Send the message to the server, control is not returned until
-                            // it has been delivered to the server meeting the specified
-                            // quality of service.
-                            //
-                            //
-                            System.out.println("Publish " + inputLine);
+                            System.out.println("Publish " + topicpath + ":" + message.toString());
 
-                            mClient.publish("kiska/amessage", message);
+                           mClient.publish(topicpath , message);
                         }
                     }
                 }
@@ -125,8 +134,9 @@ public class TtyMqttBridge implements SerialPortEventListener {
 
 
     public void connect() throws MqttException {
-        System.out.println("Connecting to " + mBrokerUrl);
-        mClient = new MqttClient("tcp://iot.eclipse.org:1883", "pubsub-1");
+        String url = "tcp://"+ mBrokerUrl;
+        System.out.println("Connecting to " + url);
+        mClient = new MqttClient(url, "pubsub-1");
         mClient.setCallback(mCallback);
         mClient.connect();
     }

@@ -94,7 +94,7 @@ public class Main {
         }
 
 
-        TtyMqttBridge bridge = new TtyMqttBridge(currPortId, broker);
+        TtyMqttBridge bridge = new TtyMqttBridge(currPortId, broker, topic);
         bridge.initialize();
 
         // instantiate the class
