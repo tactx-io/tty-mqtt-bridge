@@ -3,6 +3,19 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'Main'
+        )
+    }
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+
 sourceCompatibility = 1.5
 
 repositories {
