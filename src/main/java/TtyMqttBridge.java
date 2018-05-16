@@ -95,7 +95,7 @@ public class TtyMqttBridge implements SerialPortEventListener {
                     JSONObject jsonObj = new JSONObject(inputLine);
 
                     String topicobj = jsonObj.getString("topic-name");
-                    JSONObject valuesobj = jsonObj.getJSONObject("values");
+                    String valuesobj = jsonObj.getJSONArray("values").toString();
 
                   //  if(topicobj == null){
                     //    System.out.println("not able to parse \"topic\" name");
@@ -107,7 +107,7 @@ public class TtyMqttBridge implements SerialPortEventListener {
                     if(mClient != null){
                         if(mClient.isConnected()){
                             String topicpath = mBaseTopic + "/" + topicobj;
-                            MqttMessage message = new MqttMessage(valuesobj.toString().getBytes());
+                            MqttMessage message = new MqttMessage(valuesobj.getBytes());
                             message.setQos(2);
 
                             System.out.println("Publish " + topicpath + ":" + message.toString());

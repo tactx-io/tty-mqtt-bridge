@@ -1,0 +1,2 @@
+cd ./build/libs
+java -jar -Djava.library.path=/usr/lib/jni -cp /usr/share/java/RXTXcomm.jar:. tty-mqtt-bridge-1.0-SNAPSHOT.jar
