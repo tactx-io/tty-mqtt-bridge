@@ -39,10 +39,3 @@ dependencies {
     //compile group: 'org.rxtx', name: 'rxtx', version: '2.1.7'
     //compile group: 'org.rxtx', name: 'rxtxcomm', version: '2.2pre2'
 }
-
-task copyJarToBin(type:Copy,dependsOn:[jar]) {
-   copy {
-     from "${buildDir}/*.jar"  // needs to be gstring       
-     into "/opt/tty-mqtt-bridge"
-    }
-}

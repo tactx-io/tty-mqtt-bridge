@@ -108,6 +108,7 @@ public class TtyMqttBridge implements SerialPortEventListener {
                         if(mClient.isConnected()){
                             String topicpath = mBaseTopic + "/" + topicobj;
                             MqttMessage message = new MqttMessage(valuesobj.getBytes());
+                            message.setRetained(true);
                             message.setQos(2);
 
                             System.out.println("Publish " + topicpath + ":" + message.toString());
