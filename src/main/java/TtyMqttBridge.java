@@ -95,6 +95,7 @@ public class TtyMqttBridge implements SerialPortEventListener {
                     JSONObject jsonObj = new JSONObject(inputLine);
 
                     String topicobj = jsonObj.getString("topic-name");
+
                     String valuesobj = jsonObj.getJSONArray("values").toString();
 
                   //  if(topicobj == null){

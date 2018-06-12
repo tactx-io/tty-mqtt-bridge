@@ -10,11 +10,6 @@ import java.util.Enumeration;
  */
 public class Main {
     public static void main(String[] args) {
-
-
-        //    SerialPort serialPort;
-
-
         // first of all parse command line arguments
         boolean verbose = true;
         Options options = new Options();
@@ -87,20 +82,13 @@ public class Main {
             System.out.println("With QOS:          " + qos);
         }
 
-
         CommPortIdentifier currPortId = TtyMqttBridge.ttyPort(ttydevice);
         if(currPortId == null){
             System.out.println("Port " + ttydevice + " does not exist");
         }
 
-
         TtyMqttBridge bridge = new TtyMqttBridge(currPortId, broker, topic);
         bridge.initialize();
-
-        // instantiate the class
-
-
-
     }
 
 }

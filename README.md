@@ -1,16 +1,33 @@
-"# tty-mqtt-bridge" 
+# tty-mqtt-bridge
 
-The target is to read the data from a tty port and forward it to a MQTT broker. The program does not read the content.
+## Brief
+This project is part of a sensor network for reading environmental data.
+The purpose of this project in particular is to read data from a serial port and forward it to a MQTT broker.
 
-The idea behind that project is, to use an Arduino board for reading sensor data which is json formatted and printet to the Serial.
+## Function
+The program first opens the desired tty port and then connects to the MQTT broker. Both, serial port settigns and broker settings can be passed as commandline arguments when the programm is started.
+Once up and running the program does not interpret the data coming in, yet the actual payload must be wrapped into a JSON format in order to know which topic to publish under.
+
+The program is intended to be used with an Arduino based sensor controller.
 
 
+## Installation 
 This project requires the native libraries for rxtx installed on the target machine
-Widows
-http://rxtx.qbang.org/wiki/index.php/Installation_for_Windows
-Windows AMD6
+Widows: http://rxtx.qbang.org/wiki/index.php/Installation_for_Windows
+Raspbian: Todo
+## Run
+In order publish on a remote broker use 
+```
+java -jar -Djava.library.path=/usr/lib/jni tty-mqtt-bridge-1.0-SNAPSHOT.jar  -b iot.eclipse.org -p 1883 -t /dev/ttyACM0 -x <basetopic>/ -c mqttandi
+```
+If your system is configured with a local broker (on the same machine) use to following command
+``
+java -jar -Djava.library.path=/usr/lib/jni tty-mqtt-bridge-1.0-SNAPSHOT.jar  -b 127.0.0.1 -p 1883 -t /dev/ttyACM0 -x <basetopic>/ -c mqttandi
+``
 
-!Attention!
-This might be complete bogus... if you have any ida to improve it please let me know
+
+
+
+
 
 https://stackoverflow.com/questions/1051640/correct-way-to-add-external-jars-lib-jar-to-an-intellij-idea-project
