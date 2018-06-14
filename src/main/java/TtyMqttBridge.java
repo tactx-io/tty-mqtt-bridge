@@ -20,6 +20,9 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Enumeration;
 
 
@@ -41,6 +44,8 @@ public class TtyMqttBridge implements SerialPortEventListener {
 
     SerialPort serialPort;
 
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
+
 
     public static CommPortIdentifier ttyPort(String tty_name) {
         Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
@@ -56,6 +61,11 @@ public class TtyMqttBridge implements SerialPortEventListener {
         return null;
     }
 
+    public TtyMqttBridge(CommPortIdentifier currPortId) {
+        mCommPortIdentifier = currPortId;
+        mBrokerUrl = null;
+        mBaseTopic = null;
+    }
 
     public TtyMqttBridge(CommPortIdentifier currPortId, String brokerUrlAndPort, String basetopic) {
         mCommPortIdentifier = currPortId;
@@ -78,7 +88,8 @@ public class TtyMqttBridge implements SerialPortEventListener {
 
             serialPort.addEventListener(this);
             serialPort.notifyOnDataAvailable(true);
-            this.connect();
+            if(this.mBrokerUrl != null)
+                this.connect();
         } catch (Exception e) {
             System.out.println(e.toString());
         }
@@ -92,38 +103,92 @@ public class TtyMqttBridge implements SerialPortEventListener {
                     inputLine = input.readLine();
 
                     System.out.println("Parsing line: " + inputLine);
+
+                    /* desired jason structure
+                     *
+                     * EXPECTED INCOMING JSON OBJECT
+                     *
+                     * {
+                     *    "topic-name":"water-temperatures",
+                     *    "payload":{
+                     *       "values":[
+                     *          "22.55",
+                     *          "22.55",
+                     *          "22.55",
+                     *          "22.55",
+                     *         "22.55"
+                     *       ]
+                     *    }
+                     * }
+                     *
+                     * The topic name will be concatenated with the value of mBaseTopic to the full topic name
+                     * The
+                     *
+                     * FORMT FOR THE MQTT TOPIC PAYLOAD
+                     * {
+                     *    "timestamp":"123578",
+                     *    "payload":{
+                     *       "values":[
+                     *          "22.55",
+                     *          "22.55",
+                     *          "22.55",
+                     *          "22.55",
+                     *         "22.55"
+                     *       ]
+                     *    }
+                     * }
+
+                    */
+                    // interpret incoming strin as JSON
                     JSONObject jsonObj = new JSONObject(inputLine);
 
-                    String topicobj = jsonObj.getString("topic-name");
+                    // first parse the parameter "topic-name"
+                    String topic_name = jsonObj.getString("topic-name");
 
-                    String valuesobj = jsonObj.getJSONArray("values").toString();
+                    // get the payload object
+                    JSONObject payload = jsonObj.getJSONObject("payload");
 
-                  //  if(topicobj == null){
-                    //    System.out.println("not able to parse \"topic\" name");
-                   // }
-                    if(valuesobj == null){
-                        System.out.println("not able to parse \"valuse\" name");
+                    // check if available
+                    if(payload == null){
+                        System.out.println("not able to parse \"payload\" name");
+                        return;
                     }
 
+                    // concatenate to full topic name
+                    String full_topic_name = mBaseTopic + "/" + topic_name;
+
+                    // create the wrapping object
+                    JSONObject mqtt_json = new JSONObject();
+
+                    // get the timestamp
+                    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+                    Date date = new Date();
+
+                  //  mqtt_json.put("timestamp", timestamp);
+                  //  mqtt_json.put("timestamp", new Timestamp(date.getTime()));
+                    mqtt_json.put("timestamp", timestamp.getTime());
+                  //  mqtt_json.put("timestamp", sdf.format(timestamp));
+
+                    mqtt_json.put("payload", payload);
+
+
+                    MqttMessage message = new MqttMessage(mqtt_json.toString().getBytes());
                     if(mClient != null){
                         if(mClient.isConnected()){
-                            String topicpath = mBaseTopic + "/" + topicobj;
-                            MqttMessage message = new MqttMessage(valuesobj.getBytes());
+                            // instead of doing this wrap the payload into a json element
+                            // including the timestamp
                             message.setRetained(true);
                             message.setQos(2);
-
-                            System.out.println("Publish " + topicpath + ":" + message.toString());
-
-                           mClient.publish(topicpath , message);
+                           mClient.publish(full_topic_name , message);
                         }
                     }
+                    System.out.println("Publish " + full_topic_name + ":" + message.toString());
                 }
 
             } catch (Exception e) {
                 System.err.println("seriral in error " + e.toString());
             }
         }
-        // Ignore all the other eventTypes, but you should consider the other ones.
     }
 
     public synchronized void close() {

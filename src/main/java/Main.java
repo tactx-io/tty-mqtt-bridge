@@ -18,19 +18,19 @@ public class Main {
         listport_option.setRequired(false);
 
         Option broker_url_option = new Option("b", "broker-url", true, "url to the broker");
-        broker_url_option.setRequired(true);
+        broker_url_option.setRequired(false);
 
         Option broker_port_option = new Option("p", "broker-port", true, "port of the broker");
-        broker_port_option.setRequired(true);
+        broker_port_option.setRequired(false);
 
         Option topic_option = new Option("x", "topic", true, "topic to publish under");
-        topic_option.setRequired(true);
+        topic_option.setRequired(false);
 
         Option clientid_option = new Option("c", "clientid", true, "client id");
-        clientid_option.setRequired(true);
+        clientid_option.setRequired(false);
 
         Option tty_option = new Option("t", "tty", true, "local tty interface to publish the data from");
-        tty_option.setRequired(true);
+        tty_option.setRequired(false);
 
         options.addOption(listport_option);
         options.addOption(broker_url_option);
@@ -86,8 +86,13 @@ public class Main {
         if(currPortId == null){
             System.out.println("Port " + ttydevice + " does not exist");
         }
+        TtyMqttBridge bridge;
+        if (!cmd.hasOption("list")) {
+            bridge = new TtyMqttBridge(currPortId);
+        }else{
+            bridge = new TtyMqttBridge(currPortId, broker, topic);
+        }
 
-        TtyMqttBridge bridge = new TtyMqttBridge(currPortId, broker, topic);
         bridge.initialize();
     }
 

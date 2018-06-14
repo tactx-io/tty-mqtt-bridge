@@ -1,6 +1,6 @@
+import org.apache.tools.ant.taskdefs.condition.Os
 group 'io.tactx.tmb'
 version '1.0-SNAPSHOT'
-
 apply plugin: 'java'
 
 
@@ -31,11 +31,11 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
     compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
     compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
-    compile files('/usr/share/java/RXTXcomm.jar')
-    // https://mvnrepository.com/artifact/org.json/json
+    // Compile the the rxtx lib depending o the os
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        compile files('C:\\Program Files\\Java\\jdk1.8.0_101\\lib\\ext\\RXTXcomm.jar')
+    }else{
+        compile files('/usr/share/java/RXTXcomm.jar')
+    }
     compile group: 'org.json', name: 'json', version: '20180130'
-
-
-    //compile group: 'org.rxtx', name: 'rxtx', version: '2.1.7'
-    //compile group: 'org.rxtx', name: 'rxtxcomm', version: '2.2pre2'
 }
