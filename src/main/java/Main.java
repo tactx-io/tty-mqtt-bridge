@@ -87,7 +87,7 @@ public class Main {
             System.out.println("Port " + ttydevice + " does not exist");
         }
         TtyMqttBridge bridge;
-        if (!cmd.hasOption("list")) {
+        if (!cmd.hasOption("broker")) {
             bridge = new TtyMqttBridge(currPortId);
         }else{
             bridge = new TtyMqttBridge(currPortId, broker, topic);
