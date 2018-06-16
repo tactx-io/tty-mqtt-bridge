@@ -91,6 +91,7 @@ public class Main {
             bridge = new TtyMqttBridge(currPortId);
         }else{
             bridge = new TtyMqttBridge(currPortId, broker, topic);
+            System.out.println("Starting bridge reading from " + currPortId + ", to broker " + broker + " with topic " + topic);
         }
 
         bridge.initialize();
